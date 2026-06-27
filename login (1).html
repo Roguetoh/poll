@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PollWave — Sign in</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0e0e11;
+      --surface: #16161a;
+      --card:    #1c1c22;
+      --border:  #2a2a35;
+      --accent:  #6c63ff;
+      --accent-h:#5a52e8;
+      --text:    #f0f0f5;
+      --muted:   #8888a0;
+      --dim:     #55556a;
+      --err:     #ff6b6b;
+      --success: #4ecb7a;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    .glow {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(108,99,255,0.10) 0%, transparent 70%);
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .card {
+      position: relative;
+      width: 100%;
+      max-width: 380px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 36px 32px 32px;
+      z-index: 1;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      background: var(--accent);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-icon svg { width: 18px; height: 18px; fill: #fff; }
+
+    .logo-text {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+
+    .tabs {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 24px;
+      gap: 3px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab.active {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .form-group { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      height: 44px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 0 40px 0 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(108,99,255,0.15);
+    }
+
+    input::placeholder { color: var(--dim); }
+    input.err { border-color: var(--err); }
+
+    .input-wrap { position: relative; }
+
+    .pw-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--dim);
+      padding: 0;
+      display: flex;
+      align-items: center;
+    }
+    .pw-toggle:hover { color: var(--muted); }
+
+    .err-msg {
+      font-size: 12px;
+      color: var(--err);
+      margin-top: 5px;
+      display: none;
+    }
+    .err-msg.show { display: block; }
+
+    .banner {
+      display: none;
+      padding: 11px 13px;
+      border-radius: 9px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .banner.error   { display: block; background: rgba(255,107,107,0.10); border: 1px solid rgba(255,107,107,0.25); color: var(--err); }
+    .banner.success { display: block; background: rgba(78,203,122,0.10);  border: 1px solid rgba(78,203,122,0.25);  color: var(--success); }
+
+    .btn {
+      width: 100%;
+      height: 46px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn:hover   { background: var(--accent-h); }
+    .btn:active  { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+    .btn.loading .spinner  { display: block; }
+    .btn.loading .lbl      { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .form-panel { display: none; }
+    .form-panel.active { display: block; }
+
+    .card-footer {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .card-footer a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="glow" aria-hidden="true"></div>
+
+  <div class="card">
+    <div class="logo">
+      <div class="logo-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M3 17h4v-6H3v6zm0-8h4V7H3v2zm6 8h4v-4H9v4zm0-8h4V7H9v2zm6 8h4V9h-4v8zm0-10h4V7h-4v2z"/></svg>
+      </div>
+      <span class="logo-text">PollWave</span>
+    </div>
+
+    <h1 id="heading">Welcome back</h1>
+    <p class="subtitle" id="sub">Sign in to create and vote on polls.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-panel="login"  onclick="switchTab('login')"  role="tab" aria-selected="true">Sign in</button>
+      <button class="tab"        data-panel="signup" onclick="switchTab('signup')" role="tab" aria-selected="false">Register</button>
+    </div>
+
+    <div class="banner" id="banner" role="alert"></div>
+
+    <!-- Sign in -->
+    <div class="form-panel active" id="panel-login">
+      <div class="form-group">
+        <label for="l-user">Username</label>
+        <div class="input-wrap">
+          <input type="text" id="l-user" placeholder="your_username" autocomplete="username" />
+        </div>
+        <p class="err-msg" id="l-user-err"></p>
+      </div>
+      <div class="form-group">
+        <label for="l-pw">Password</label>
+        <div class="input-wrap">
+          <input type="password" id="l-pw" placeholder="••••••••" autocomplete="current-password" />
+          <button class="pw-toggle" type="button" onclick="togglePw('l-pw',this)" aria-label="Show password">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <p class="err-msg" id="l-pw-err"></p>
+      </div>
+      <button class="btn" id="btn-login" onclick="handleLogin()">
+        <div class="spinner"></div><span class="lbl">Sign in</span>
+      </button>
+    </div>
+
+    <!-- Register -->
+    <div class="form-panel" id="panel-signup">
+      <div class="form-group">
+        <label for="s-user">Username</label>
+        <div class="input-wrap">
+          <input type="text" id="s-user" placeholder="pick a username" autocomplete="username" />
+        </div>
+        <p class="err-msg" id="s-user-err"></p>
+      </div>
+      <div class="form-group">
+        <label for="s-pw">Password</label>
+        <div class="input-wrap">
+          <input type="password" id="s-pw" placeholder="Min. 6 characters" autocomplete="new-password" />
+          <button class="pw-toggle" type="button" onclick="togglePw('s-pw',this)" aria-label="Show password">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <p class="err-msg" id="s-pw-err"></p>
+      </div>
+      <button class="btn" id="btn-signup" onclick="handleSignup()">
+        <div class="spinner"></div><span class="lbl">Create account</span>
+      </button>
+    </div>
+
+    <div class="card-footer" id="footer">
+      Don't have an account? <a href="#" onclick="switchTab('signup');return false;">Register</a>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL  = 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.panel === tab);
+        t.setAttribute('aria-selected', t.dataset.panel === tab);
+      });
+      document.querySelectorAll('.form-panel').forEach(p =>
+        p.classList.toggle('active', p.id === 'panel-' + tab)
+      );
+      clearAll();
+      if (tab === 'login') {
+        document.getElementById('heading').textContent = 'Welcome back';
+        document.getElementById('sub').textContent = 'Sign in to create and vote on polls.';
+        document.getElementById('footer').innerHTML = "Don't have an account? <a href='#' onclick='switchTab(\"signup\");return false;'>Register</a>";
+      } else {
+        document.getElementById('heading').textContent = 'Create account';
+        document.getElementById('sub').textContent = 'Pick a username and you\'re in.';
+        document.getElementById('footer').innerHTML = "Already have an account? <a href='#' onclick='switchTab(\"login\");return false;'>Sign in</a>";
+      }
+    }
+
+    function togglePw(id, btn) {
+      const input = document.getElementById(id);
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.innerHTML = show
+        ? `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+        : `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    }
+
+    function setErr(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.toggle('show', !!msg);
+    }
+
+    function showBanner(msg, type = 'error') {
+      const b = document.getElementById('banner');
+      b.textContent = msg;
+      b.className = 'banner ' + type;
+    }
+
+    function clearAll() {
+      document.getElementById('banner').className = 'banner';
+      document.querySelectorAll('.err-msg').forEach(e => { e.textContent = ''; e.classList.remove('show'); });
+      document.querySelectorAll('input').forEach(i => i.classList.remove('err'));
+    }
+
+    function setLoading(id, on) {
+      const btn = document.getElementById(id);
+      btn.disabled = on;
+      btn.classList.toggle('loading', on);
+    }
+
+    // ── Sign in ────────────────────────────────────────────────
+    async function handleLogin() {
+      clearAll();
+      const username = document.getElementById('l-user').value.trim();
+      const pw       = document.getElementById('l-pw').value;
+      let ok = true;
+
+      if (!username) { setErr('l-user-err', 'Username is required.'); document.getElementById('l-user').classList.add('err'); ok = false; }
+      if (!pw)       { setErr('l-pw-err',   'Password is required.'); document.getElementById('l-pw').classList.add('err');   ok = false; }
+      if (!ok) return;
+
+      setLoading('btn-login', true);
+      try {
+        // Look up user by username, then verify password hash via RPC
+        const { data, error } = await sb.rpc('login_user', { p_username: username, p_password: pw });
+        if (error || !data) throw new Error('Incorrect username or password.');
+
+        // Store session (user id) in sessionStorage
+        sessionStorage.setItem('pw_user', JSON.stringify(data));
+        window.location.href = 'dashboard.html';
+      } catch (e) {
+        showBanner(e.message);
+      } finally {
+        setLoading('btn-login', false);
+      }
+    }
+
+    // ── Register ───────────────────────────────────────────────
+    async function handleSignup() {
+      clearAll();
+      const username = document.getElementById('s-user').value.trim();
+      const pw       = document.getElementById('s-pw').value;
+      let ok = true;
+
+      if (!username)         { setErr('s-user-err', 'Username is required.');          document.getElementById('s-user').classList.add('err'); ok = false; }
+      else if (username.length < 3) { setErr('s-user-err', 'At least 3 characters.'); document.getElementById('s-user').classList.add('err'); ok = false; }
+      else if (!/^[a-zA-Z0-9_]+$/.test(username)) { setErr('s-user-err', 'Letters, numbers and _ only.'); document.getElementById('s-user').classList.add('err'); ok = false; }
+      if (pw.length < 6)    { setErr('s-pw-err',   'At least 6 characters.');          document.getElementById('s-pw').classList.add('err');   ok = false; }
+      if (!ok) return;
+
+      setLoading('btn-signup', true);
+      try {
+        const { error } = await sb.rpc('register_user', { p_username: username, p_password: pw });
+        if (error) {
+          if (error.message.includes('unique')) throw new Error('That username is already taken.');
+          throw error;
+        }
+        showBanner('Account created! You can now sign in.', 'success');
+        setTimeout(() => switchTab('login'), 1800);
+      } catch (e) {
+        showBanner(e.message);
+      } finally {
+        setLoading('btn-signup', false);
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      if (document.getElementById('panel-login').classList.contains('active')) handleLogin();
+      else handleSignup();
+    });
+  </script>
+</body>
+</html>
