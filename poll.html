@@ -234,12 +234,18 @@
       badge.textContent = isClosed ? 'Closed' : 'Open';
       badge.className   = `badge ${isClosed ? 'badge-closed' : 'badge-open'}`;
 
-      const resultsMode = hasVoted || isClosed;
+      const resultsMode = hasVoted || isClosed || isOwner;
       if (resultsMode) {
-        document.getElementById('options-title').textContent = 'Results';
-        document.getElementById('options-card').classList.add('results-mode');
-        document.getElementById('vote-footer').style.display = 'none';
-        if (hasVoted) document.getElementById('voted-msg').classList.add('show');
+        document.getElementById("options-title").textContent = "Results";
+        document.getElementById("options-card").classList.add("results-mode");
+        document.getElementById("vote-footer").style.display = "none";
+        if (hasVoted) document.getElementById("voted-msg").classList.add("show");
+        if (isOwner && !hasVoted && !isClosed) {
+          const vm = document.getElementById("voted-msg");
+          vm.classList.add("show");
+          vm.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> You created this poll — creators cannot vote on their own polls.';
+        }
+      }
       }
 
       renderOptions(resultsMode);
