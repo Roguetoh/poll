@@ -104,6 +104,27 @@
     .skel { background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;margin-bottom:16px; }
     .skel-box { background:var(--border);border-radius:8px;animation:pulse 1.4s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+    /* ── Results summary ── */
+    .results-summary { margin-top:16px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px 24px; }
+    .results-summary h3 { font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px; }
+    .rs-row { display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border); }
+    .rs-row:last-child { border-bottom:none; }
+    .rs-rank { font-size:13px;width:24px;text-align:center;flex-shrink:0; }
+    .rs-avatar { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0; }
+    .rs-avatar.correct   { background:rgba(78,203,122,0.15);color:var(--success); }
+    .rs-avatar.incorrect { background:rgba(255,107,107,0.12);color:var(--err); }
+    .rs-avatar.creator   { background:rgba(255,169,77,0.15);color:var(--gold); }
+    .rs-name { flex:1;font-size:14px;font-weight:500; }
+    .rs-name.is-me { color:var(--accent); }
+    .rs-pts { font-size:13px;font-weight:700; }
+    .rs-pts.gain { color:var(--success); }
+    .rs-pts.loss { color:var(--err); }
+    .rs-pts.neutral { color:var(--muted); }
+    .rs-tag { font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:4px; }
+    .rs-tag.correct   { background:rgba(78,203,122,0.12);color:var(--success); }
+    .rs-tag.incorrect { background:rgba(255,107,107,0.10);color:var(--err); }
+    .rs-tag.creator   { background:rgba(255,169,77,0.12);color:var(--gold); }
+    .rs-empty { font-size:13px;color:var(--dim);text-align:center;padding:8px 0; }
     @media(max-width:600px){nav{padding:0 16px}main{padding:24px 16px 60px}}
   </style>
 </head>
@@ -163,6 +184,12 @@
           <div class="spinner" id="close-spinner"></div>
           <span id="close-lbl">Close poll with this answer</span>
         </button>
+      </div>
+
+      <!-- Results summary (shown when poll is closed with final answer) -->
+      <div class="results-summary" id="results-summary" style="display:none">
+        <h3>🏆 Results summary</h3>
+        <div id="rs-list"></div>
       </div>
     </div>
   </main>
@@ -258,6 +285,12 @@
       if (isOwner && !isClosed) {
         document.getElementById('owner-section').style.display = 'block';
         renderOwnerOptions();
+      }
+
+      // Show results summary if poll is closed with a final answer
+      if (isClosed && finalAnswerId) {
+        document.getElementById('results-summary').style.display = 'block';
+        renderResultsSummary();
       }
     }
 
@@ -385,6 +418,69 @@
         const b = document.getElementById('err-banner');
         b.textContent = e.message; b.className = 'banner error';
         btn.disabled = false; btn.classList.remove('loading');
+      }
+    }
+
+    async function renderResultsSummary() {
+      const list = document.getElementById('rs-list');
+      list.innerHTML = '<div class="rs-empty">Loading…</div>';
+
+      try {
+        // Fetch all voters with their usernames and chosen options
+        const { data: voteData, error: vErr } = await sb
+          .from('votes')
+          .select('user_id,option_id')
+          .eq('poll_id', pollId);
+        if (vErr) throw vErr;
+
+        if (!voteData || !voteData.length) {
+          list.innerHTML = '<div class="rs-empty">No votes were cast on this poll.</div>';
+          return;
+        }
+
+        const voterIds = voteData.map(v => v.user_id);
+        const { data: userData, error: uErr } = await sb
+          .from('users')
+          .select('id,username,points')
+          .in('id', voterIds);
+        if (uErr) throw uErr;
+
+        const userMap = {};
+        (userData || []).forEach(u => userMap[u.id] = u);
+
+        // Build rows: voters first, then creator
+        const rows = voteData.map(v => {
+          const correct = v.option_id === finalAnswerId;
+          const u = userMap[v.user_id] || { username: '?', points: 0 };
+          return { type: correct ? 'correct' : 'incorrect', username: u.username, userId: v.user_id, pts: correct ? +5 : -5 };
+        });
+
+        // Sort: correct first, then incorrect
+        rows.sort((a, b) => b.pts - a.pts);
+
+        // Add creator row
+        const correctCount   = rows.filter(r => r.type === 'correct').length;
+        const incorrectCount = rows.filter(r => r.type === 'incorrect').length;
+        const creatorNet     = (incorrectCount * 5) - (correctCount * 5);
+        rows.push({ type: 'creator', username: poll.username, userId: poll.user_id, pts: creatorNet });
+
+        const medals = ['🥇','🥈','🥉'];
+        list.innerHTML = rows.map((row, i) => {
+          const isMe      = row.userId === user.id;
+          const ptsClass  = row.pts > 0 ? 'gain' : row.pts < 0 ? 'loss' : 'neutral';
+          const ptsLabel  = row.pts > 0 ? `+${row.pts}` : `${row.pts}`;
+          const tagLabel  = row.type === 'creator' ? 'Creator' : row.type === 'correct' ? '✓ Correct' : '✗ Wrong';
+          const rank      = row.type !== 'creator' ? (medals[i] || i+1) : '👑';
+          return `<div class="rs-row">
+            <div class="rs-rank">${rank}</div>
+            <div class="rs-avatar ${row.type}">${row.username[0].toUpperCase()}</div>
+            <div class="rs-name ${isMe?'is-me':''}">${escHtml(row.username)}${isMe?' (you)':''}</div>
+            <span class="rs-tag ${row.type}">${tagLabel}</span>
+            <div class="rs-pts ${ptsClass}">${ptsLabel} pts</div>
+          </div>`;
+        }).join('');
+      } catch(e) {
+        list.innerHTML = `<div class="rs-empty">Failed to load summary: ${e.message}</div>`;
       }
     }
 
