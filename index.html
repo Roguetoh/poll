@@ -398,7 +398,8 @@
       try {
         // Look up user by username, then verify password hash via RPC
         const { data, error } = await sb.rpc('login_user', { p_username: username, p_password: pw });
-        if (error || !data) throw new Error('Incorrect username or password.');
+        if (error) throw new Error('Something went wrong. Please try again.');
+        if (!data || data.length === 0) throw new Error('Incorrect username or password.');
 
         // Store session (user id) in sessionStorage
         sessionStorage.setItem('pw_user', JSON.stringify(data));
