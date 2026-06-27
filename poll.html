@@ -200,7 +200,7 @@
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     const session = sessionStorage.getItem('pw_user');
-    if (!session) { window.location.href = 'login.html'; }
+    if (!session) { window.location.href = 'index.html'; }
     const user = JSON.parse(session);
 
     const pollId = new URLSearchParams(window.location.search).get('id');
