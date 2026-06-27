@@ -164,25 +164,47 @@
 
     async function loadPolls() {
       try {
-        // Fetch polls and usernames separately to avoid join ambiguity
+        // Fetch polls
         const { data: polls, error: pollErr } = await sb
           .from('polls')
-          .select('id,question,description,is_public,created_at,ends_at,user_id,poll_options(id),votes(id)')
+          .select('id,question,description,is_public,created_at,ends_at,user_id')
           .order('created_at', { ascending: false });
         if (pollErr) throw pollErr;
-
-        // Fetch all unique usernames for poll owners
+    
+        const pollIds = polls.map(p => p.id);
         const userIds = [...new Set(polls.map(p => p.user_id))];
-        const { data: users, error: userErr } = await sb
-          .from('users')
-          .select('id,username')
-          .in('id', userIds);
-        if (userErr) throw userErr;
-
+    
+        // Fetch usernames, options, votes in parallel
+        const [usersRes, optionsRes, votesRes] = await Promise.all([
+          sb.from('users').select('id,username').in('id', userIds),
+          sb.from('poll_options').select('id,poll_id').in('poll_id', pollIds),
+          sb.from('votes').select('id,poll_id').in('poll_id', pollIds),
+        ]);
+    
+        if (usersRes.error)   throw usersRes.error;
+        if (optionsRes.error) throw optionsRes.error;
+        if (votesRes.error)   throw votesRes.error;
+    
         const userMap = {};
-        (users || []).forEach(u => userMap[u.id] = u.username);
-
-        allPolls = polls.map(p => ({ ...p, username: userMap[p.user_id] || '?' }));
+        (usersRes.data || []).forEach(u => userMap[u.id] = u.username);
+    
+        const optionCount = {};
+        (optionsRes.data || []).forEach(o => {
+          optionCount[o.poll_id] = (optionCount[o.poll_id] || 0) + 1;
+        });
+    
+        const voteCount = {};
+        (votesRes.data || []).forEach(v => {
+          voteCount[v.poll_id] = (voteCount[v.poll_id] || 0) + 1;
+        });
+    
+        allPolls = polls.map(p => ({
+          ...p,
+          username:     userMap[p.user_id] || '?',
+          optionCount:  optionCount[p.id]  || 0,
+          voteCount:    voteCount[p.id]    || 0,
+        }));
+    
         updateStats();
         renderPolls();
       } catch (e) {
@@ -192,7 +214,7 @@
 
     function updateStats() {
       const mine       = allPolls.filter(p => p.user_id === user.id);
-      const totalVotes = allPolls.reduce((sum, p) => sum + (p.votes?.length || 0), 0);
+      const totalVotes = allPolls.reduce((sum, p) => sum + p.voteCount, 0);
       const pub        = allPolls.filter(p => p.is_public);
       document.getElementById('stat-my').textContent     = mine.length;
       document.getElementById('stat-votes').textContent  = totalVotes;
@@ -212,8 +234,8 @@
 
       list.innerHTML = polls.map(p => {
         const isOwner  = p.user_id === user.id;
-        const optCount = p.poll_options?.length || 0;
-        const votes    = p.votes?.length || 0;
+        const optCount = p.optionCount;
+        const votes    = p.voteCount;
         const expired  = p.ends_at && new Date(p.ends_at) < new Date();
         const open     = !expired;
         const created  = new Date(p.created_at).toLocaleDateString('en-MY',{day:'numeric',month:'short',year:'numeric'});
