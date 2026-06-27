@@ -29,25 +29,29 @@
     .btn-accent { background:var(--accent);border-color:var(--accent);color:#fff; }
     .btn-accent:hover { background:var(--accent-h);border-color:var(--accent-h); }
 
-    main { position:relative;z-index:1;max-width:900px;margin:0 auto;padding:36px 24px 60px; }
+    main { position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:36px 24px 60px; }
     .page-header { display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap; }
     .page-header h1 { font-size:24px;font-weight:700;letter-spacing:-0.4px; }
     .page-header p { font-size:14px;color:var(--muted);margin-top:3px; }
 
-    .stats { display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:28px; }
-    .stat-card { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;transition:border-color 0.2s; }
-    .stat-label { font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px; }
-    .stat-value { font-size:28px;font-weight:700;letter-spacing:-0.5px;transition:color 0.2s; }
+    /* Two-column layout */
+    .dashboard-layout { display:grid;grid-template-columns:268px 1fr;gap:20px;align-items:start; }
+    .left-panel { display:flex;flex-direction:column;gap:12px;position:sticky;top:72px; }
 
-    .leaderboard { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:28px; }
+    .stats { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+    .stat-card { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;transition:border-color 0.2s; }
+    .stat-label { font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px; }
+    .stat-value { font-size:26px;font-weight:700;letter-spacing:-0.5px;transition:color 0.2s; }
+
+    .leaderboard { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px; }
     .leaderboard-title { font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted);margin-bottom:14px; }
-    .lb-row { display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border); }
+    .lb-row { display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border); }
     .lb-row:last-child { border-bottom:none; }
-    .lb-rank { font-size:13px;font-weight:700;width:28px;text-align:center;color:var(--dim);flex-shrink:0; }
-    .lb-avatar { width:28px;height:28px;border-radius:50%;background:rgba(108,99,255,0.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--accent);flex-shrink:0; }
-    .lb-name { flex:1;font-size:14px;font-weight:500; }
+    .lb-rank { font-size:13px;font-weight:700;width:24px;text-align:center;color:var(--dim);flex-shrink:0; }
+    .lb-avatar { width:26px;height:26px;border-radius:50%;background:rgba(108,99,255,0.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--accent);flex-shrink:0; }
+    .lb-name { flex:1;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
     .lb-name.is-me { color:var(--accent); }
-    .lb-pts { font-size:13px;font-weight:700; }
+    .lb-pts { font-size:13px;font-weight:700;flex-shrink:0; }
     .lb-empty { font-size:13px;color:var(--dim);text-align:center;padding:12px 0; }
 
     .tabs { display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px; }
@@ -55,13 +59,13 @@
     .tab.active { color:var(--text);border-bottom-color:var(--accent); }
 
     .poll-list { display:flex;flex-direction:column;gap:12px; }
-    .poll-card { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:border-color 0.15s,background 0.15s; }
+    .poll-card { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:border-color 0.15s,background 0.15s; }
     .poll-card:hover { border-color:var(--border2);background:var(--card2); }
-    .poll-icon { width:42px;height:42px;background:rgba(108,99,255,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .poll-icon { width:40px;height:40px;background:rgba(108,99,255,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
     .poll-icon svg { width:20px;height:20px;fill:var(--accent); }
     .poll-body { flex:1;min-width:0; }
-    .poll-question { font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px; }
-    .poll-meta { font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap; }
+    .poll-question { font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px; }
+    .poll-meta { font-size:12px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap; }
     .poll-right { display:flex;align-items:center;gap:8px;flex-shrink:0; }
     .badge { padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:0.3px; }
     .badge-open     { background:rgba(78,203,122,0.12);color:var(--success); }
@@ -77,7 +81,7 @@
     .empty h3 { font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px; }
     .empty p { font-size:14px; }
 
-    .skeleton { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px;display:flex;gap:16px;align-items:center; }
+    .skeleton { background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;gap:14px;align-items:center; }
     .skel-box { background:var(--border);border-radius:8px;animation:pulse 1.4s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 
@@ -114,6 +118,11 @@
     .toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-size:13px;color:var(--text);z-index:999;transition:transform 0.25s ease;white-space:nowrap; }
     .toast.show { transform:translateX(-50%) translateY(0); }
 
+    @media(max-width:800px) {
+      .dashboard-layout { grid-template-columns:1fr; }
+      .left-panel { position:static; }
+      .stats { grid-template-columns:1fr 1fr; }
+    }
     @media(max-width:700px) { nav{padding:0 16px} main{padding:24px 16px 60px} .nav-user{display:none} }
   </style>
 </head>
@@ -134,35 +143,45 @@
   <main>
     <div class="page-header"><div><h1>Dashboard</h1><p>Create polls, collect points, see results.</p></div></div>
 
-    <div class="stats">
-      <div class="stat-card" id="stat-points-card">
-        <div class="stat-label">Your points</div>
-        <div class="stat-value" id="stat-points">—</div>
+    <div class="dashboard-layout">
+
+      <!-- LEFT PANEL -->
+      <div class="left-panel">
+        <div class="stats">
+          <div class="stat-card" id="stat-points-card">
+            <div class="stat-label">Your points</div>
+            <div class="stat-value" id="stat-points">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Not voted</div>
+            <div class="stat-value" id="stat-unvoted">—</div>
+          </div>
+        </div>
+
+        <div class="leaderboard">
+          <div class="leaderboard-title">🏆 Leaderboard</div>
+          <div id="lb-list"><div class="lb-empty">Loading…</div></div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Not voted</div>
-        <div class="stat-value" id="stat-unvoted">—</div>
+
+      <!-- RIGHT PANEL -->
+      <div>
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('all')"     id="tab-all">All polls</button>
+          <button class="tab"        onclick="switchTab('mine')"    id="tab-mine">My polls</button>
+          <button class="tab"        onclick="switchTab('unvoted')" id="tab-unvoted">Not voted</button>
+          <button class="tab"        onclick="switchTab('closed')"  id="tab-closed">Closed</button>
+        </div>
+
+        <div class="banner" id="page-banner"></div>
+
+        <div class="poll-list" id="poll-list">
+          <div class="skeleton" id="skel1"><div class="skel-box" style="width:40px;height:40px;border-radius:10px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="skel-box" style="height:14px;width:60%"></div><div class="skel-box" style="height:12px;width:35%"></div></div></div>
+          <div class="skeleton" id="skel2"><div class="skel-box" style="width:40px;height:40px;border-radius:10px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="skel-box" style="height:14px;width:75%"></div><div class="skel-box" style="height:12px;width:40%"></div></div></div>
+          <div class="skeleton" id="skel3"><div class="skel-box" style="width:40px;height:40px;border-radius:10px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="skel-box" style="height:14px;width:50%"></div><div class="skel-box" style="height:12px;width:30%"></div></div></div>
+        </div>
       </div>
-    </div>
 
-    <div class="leaderboard">
-      <div class="leaderboard-title">🏆 Leaderboard</div>
-      <div id="lb-list"><div class="lb-empty">Loading…</div></div>
-    </div>
-
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('all')"     id="tab-all">All polls</button>
-      <button class="tab"        onclick="switchTab('mine')"    id="tab-mine">My polls</button>
-      <button class="tab"        onclick="switchTab('unvoted')" id="tab-unvoted">Not voted</button>
-      <button class="tab"        onclick="switchTab('closed')"  id="tab-closed">Closed</button>
-    </div>
-
-    <div class="banner" id="page-banner"></div>
-
-    <div class="poll-list" id="poll-list">
-      <div class="skeleton" id="skel1"><div class="skel-box" style="width:42px;height:42px;border-radius:10px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="skel-box" style="height:14px;width:60%"></div><div class="skel-box" style="height:12px;width:35%"></div></div></div>
-      <div class="skeleton" id="skel2"><div class="skel-box" style="width:42px;height:42px;border-radius:10px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="skel-box" style="height:14px;width:75%"></div><div class="skel-box" style="height:12px;width:40%"></div></div></div>
-      <div class="skeleton" id="skel3"><div class="skel-box" style="width:42px;height:42px;border-radius:10px;flex-shrink:0"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div class="skel-box" style="height:14px;width:50%"></div><div class="skel-box" style="height:12px;width:30%"></div></div></div>
     </div>
   </main>
 
@@ -202,12 +221,9 @@
     let currentTab = 'all';
     let allPolls   = [];
 
-    // ── Helpers ────────────────────────────────────────────────
     function ptsColor(n)  { return n > 0 ? 'var(--gold)' : n < 0 ? 'var(--err)' : 'var(--muted)'; }
     function ptsIcon(n)   { return n < 0 ? '📉' : '⭐'; }
-    function ptsLabel(n)  { return (n > 0 ? '+' : '') + n + ' pts'; }
 
-    // ── Load everything ────────────────────────────────────────
     async function loadAll() {
       await Promise.all([loadPolls(), loadLeaderboard()]);
     }
@@ -224,18 +240,16 @@
         const me    = (data || []).find(u => u.id === user.id);
         const myPts = me?.points ?? 0;
 
-        // Update nav badge
         const badge = document.getElementById('nav-points-badge');
         badge.innerHTML = `${ptsIcon(myPts)} <span id="nav-points">${myPts}</span> pts`;
-        badge.style.color       = ptsColor(myPts);
-        badge.style.background  = myPts < 0 ? 'rgba(255,107,107,0.08)' : 'rgba(255,169,77,0.10)';
-        badge.style.border      = `1px solid ${myPts < 0 ? 'rgba(255,107,107,0.25)' : 'rgba(255,169,77,0.2)'}`;
+        badge.style.color      = ptsColor(myPts);
+        badge.style.background = myPts < 0 ? 'rgba(255,107,107,0.08)' : 'rgba(255,169,77,0.10)';
+        badge.style.border     = `1px solid ${myPts < 0 ? 'rgba(255,107,107,0.25)' : 'rgba(255,169,77,0.2)'}`;
 
-        // Update stat card
         const statEl   = document.getElementById('stat-points');
         const statCard = document.getElementById('stat-points-card');
-        statEl.textContent   = myPts;
-        statEl.style.color   = ptsColor(myPts);
+        statEl.textContent         = myPts;
+        statEl.style.color         = ptsColor(myPts);
         statCard.style.borderColor = myPts < 0 ? 'rgba(255,107,107,0.25)' : myPts > 0 ? 'rgba(255,169,77,0.25)' : 'var(--border)';
         statCard.style.background  = myPts < 0 ? 'rgba(255,107,107,0.05)' : myPts > 0 ? 'rgba(255,169,77,0.05)' : 'var(--card)';
 
@@ -247,12 +261,11 @@
 
         const medals = ['🥇','🥈','🥉'];
         list.innerHTML = data.map((u, i) => {
-          const isMe   = u.id === user.id;
-          const color  = ptsColor(u.points);
-          const icon   = ptsIcon(u.points);
-          const rankDisplay = medals[i] || (i + 1);
+          const isMe  = u.id === user.id;
+          const color = ptsColor(u.points);
+          const icon  = ptsIcon(u.points);
           return `<div class="lb-row">
-            <div class="lb-rank">${rankDisplay}</div>
+            <div class="lb-rank">${medals[i] || (i + 1)}</div>
             <div class="lb-avatar">${u.username[0].toUpperCase()}</div>
             <div class="lb-name ${isMe ? 'is-me' : ''}">${escHtml(u.username)}${isMe ? ' (you)' : ''}</div>
             <div class="lb-pts" style="color:${color}">${icon} ${u.points}</div>
