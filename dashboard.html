@@ -618,7 +618,7 @@
 
     // ── Auth guard ─────────────────────────────────────────────
     const session = sessionStorage.getItem('pw_user');
-    if (!session) { window.location.href = 'login.html'; }
+    if (!session) { window.location.href = 'index.html'; }
     const user = JSON.parse(session);
     document.getElementById('nav-username').textContent = user.username;
 
