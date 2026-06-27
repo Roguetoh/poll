@@ -251,7 +251,9 @@
             <div class="lb-rank ${rankClass}">${medals[i] || i+1}</div>
             <div class="lb-avatar">${u.username[0].toUpperCase()}</div>
             <div class="lb-name ${isMe?'is-me':''}">${escHtml(u.username)}${isMe?' (you)':''}</div>
-            <div class="lb-pts">⭐ ${u.points}</div>
+            <div class="lb-pts" style="color:${u.points < 0 ? 'var(--err)' : 'var(--gold)'}">
+              ${u.points < 0 ? '📉' : '⭐'} ${u.points}
+            </div>
           </div>`;
         }).join('');
       } catch(e) {
