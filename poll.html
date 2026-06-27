@@ -191,30 +191,25 @@
 
     async function loadPoll() {
       try {
+        // Load poll
         const { data: p, error: pErr } = await sb
           .from('polls')
-          .select('id,question,description,is_public,created_at,ends_at,user_id,final_answer_id')
+          .select('id,question,description,is_public,created_at,ends_at,user_id,final_answer_id,poll_options(id,label,position),votes(id,option_id,user_id)')
           .eq('id', pollId)
           .single();
         if (pErr) throw pErr;
-    
-        const [optRes, voteRes, uRes] = await Promise.all([
-          sb.from('poll_options').select('id,label,position').eq('poll_id', pollId).order('position'),
-          sb.from('votes').select('id,option_id,user_id').eq('poll_id', pollId),
-          sb.from('users').select('username').eq('id', p.user_id).single(),
-        ]);
-    
-        if (optRes.error)  throw optRes.error;
-        if (voteRes.error) throw voteRes.error;
-    
-        poll          = { ...p, username: uRes.data?.username || '?' };
-        options       = optRes.data  || [];
-        votes         = voteRes.data || [];
-        hasVoted      = votes.some(v => v.user_id === user.id);
-        isOwner       = p.user_id === user.id;
-        isClosed      = !!(p.ends_at && new Date(p.ends_at) < new Date());
+
+        // Load owner username separately
+        const { data: uData } = await sb.from('users').select('username').eq('id', p.user_id).single();
+
+        poll     = { ...p, username: uData?.username || '?' };
+        options  = (p.poll_options || []).sort((a,b) => a.position - b.position);
+        votes    = p.votes || [];
+        hasVoted = votes.some(v => v.user_id === user.id);
+        isOwner  = p.user_id === user.id;
+        isClosed = p.ends_at && new Date(p.ends_at) < new Date();
         finalAnswerId = p.final_answer_id || null;
-    
+
         renderPoll();
       } catch(e) {
         document.getElementById('skeletons').innerHTML =
@@ -344,6 +339,14 @@
           .eq('id', pollId)
           .eq('user_id', user.id);
         if (error) throw error;
+
+        // Award points: +5 per incorrect voter to creator, +5 to correct voters
+        await sb.rpc('award_points_on_close', {
+          p_poll_id:         pollId,
+          p_final_answer_id: ownerSelectedId,
+          p_creator_id:      user.id,
+        });
+
         await loadPoll();
       } catch(e) {
         const b = document.getElementById('err-banner');
