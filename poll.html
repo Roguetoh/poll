@@ -46,6 +46,12 @@
     .option.selected { border-color:var(--accent);background:rgba(108,99,255,0.08); }
     .option.winner { border-color:rgba(255,169,77,0.5);background:rgba(255,169,77,0.04); }
     .option.final-answer { border-color:var(--gold);background:rgba(255,169,77,0.08); }
+    /* result colours when poll is closed with a final answer */
+    .option.result-correct   { border-color:rgba(78,203,122,0.5) !important;background:rgba(78,203,122,0.08) !important; }
+    .option.result-correct .option-bar   { background:rgba(78,203,122,0.12) !important; }
+    .option.result-incorrect { border-color:rgba(255,107,107,0.4) !important;background:rgba(255,107,107,0.06) !important; }
+    .option.result-incorrect .option-bar { background:rgba(255,107,107,0.08) !important; }
+    .option.result-unchosen  { opacity:0.6; }
     .option-inner { position:relative;z-index:1;display:flex;align-items:center;gap:12px; }
     .option-radio { width:18px;height:18px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:border-color 0.15s; }
     .option.selected .option-radio { border-color:var(--accent); }
@@ -185,32 +191,25 @@
 
     async function loadPoll() {
       try {
-        // Fetch poll
+        // Load poll
         const { data: p, error: pErr } = await sb
           .from('polls')
-          .select('id,question,description,is_public,created_at,ends_at,user_id,final_answer_id')
+          .select('id,question,description,is_public,created_at,ends_at,user_id,final_answer_id,poll_options(id,label,position),votes(id,option_id,user_id)')
           .eq('id', pollId)
           .single();
         if (pErr) throw pErr;
-    
-        // Fetch options, votes, username in parallel
-        const [optRes, voteRes, uRes] = await Promise.all([
-          sb.from('poll_options').select('id,label,position').eq('poll_id', pollId).order('position'),
-          sb.from('votes').select('id,option_id,user_id').eq('poll_id', pollId),
-          sb.from('users').select('username').eq('id', p.user_id).single(),
-        ]);
-    
-        if (optRes.error)  throw optRes.error;
-        if (voteRes.error) throw voteRes.error;
-    
-        poll          = { ...p, username: uRes.data?.username || '?' };
-        options       = optRes.data  || [];
-        votes         = voteRes.data || [];
-        hasVoted      = votes.some(v => v.user_id === user.id);
-        isOwner       = p.user_id === user.id;
-        isClosed      = p.ends_at && new Date(p.ends_at) < new Date();
+
+        // Load owner username separately
+        const { data: uData } = await sb.from('users').select('username').eq('id', p.user_id).single();
+
+        poll     = { ...p, username: uData?.username || '?' };
+        options  = (p.poll_options || []).sort((a,b) => a.position - b.position);
+        votes    = p.votes || [];
+        hasVoted = votes.some(v => v.user_id === user.id);
+        isOwner  = p.user_id === user.id;
+        isClosed = p.ends_at && new Date(p.ends_at) < new Date();
         finalAnswerId = p.final_answer_id || null;
-    
+
         renderPoll();
       } catch(e) {
         document.getElementById('skeletons').innerHTML =
@@ -261,21 +260,32 @@
       const myVote   = votes.find(v => v.user_id === user.id);
 
       document.getElementById('options-list').innerHTML = options.map(opt => {
-        const count   = voteCounts[opt.id] || 0;
-        const pct     = totalVotes > 0 ? Math.round((count/totalVotes)*100) : 0;
-        const isFinal = finalAnswerId === opt.id;
-        const isMyVote= myVote?.option_id === opt.id;
-        const isWinner= resultsMode && count===maxVotes && count>0 && !finalAnswerId;
+        const count    = voteCounts[opt.id] || 0;
+        const pct      = totalVotes > 0 ? Math.round((count/totalVotes)*100) : 0;
+        const isFinal  = finalAnswerId === opt.id;
+        const isMyVote = myVote?.option_id === opt.id;
+        const isWinner = resultsMode && count===maxVotes && count>0 && !finalAnswerId;
 
-        return `<div class="option${isMyVote?' selected':''}${isFinal?' final-answer':isWinner?' winner':''} ${resultsMode?'no-hover':''}"
+        // colour logic: only applies when poll is closed AND has a final answer
+        let resultClass = '';
+        if (isClosed && finalAnswerId) {
+          if (isFinal && isMyVote)       resultClass = 'result-correct';   // picked the right one
+          else if (!isFinal && isMyVote) resultClass = 'result-incorrect'; // picked wrong one
+          else if (isFinal)              resultClass = 'final-answer';     // the correct answer (not chosen by user)
+          else                           resultClass = 'result-unchosen';  // neither chosen nor correct
+        }
+
+        const baseClass = `option${isMyVote&&!finalAnswerId?' selected':''}${!isClosed||!finalAnswerId?(isWinner?' winner':''):''}`;
+
+        return `<div class="${baseClass} ${resultClass} ${resultsMode?'no-hover':''}"
              id="opt-${opt.id}" onclick="selectOption('${opt.id}')">
           <div class="option-bar" style="width:${resultsMode?pct:0}%"></div>
           <div class="option-inner">
             <div class="option-radio"><div class="option-radio-dot"></div></div>
             <span class="option-label">
               ${escHtml(opt.label)}
-              ${isFinal?`<span class="final-answer-badge">👑 Final answer</span>`:''}
-              ${isMyVote?`<span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:6px">✓ Your vote</span>`:''}
+              ${isFinal ? `<span class="final-answer-badge">👑 Final answer</span>` : ''}
+              ${isMyVote ? `<span style="font-size:11px;color:${isClosed&&finalAnswerId?(isFinal?'var(--success)':'var(--err)'):'var(--accent)'};font-weight:600;margin-left:6px">${isClosed&&finalAnswerId?(isFinal?'✓ Correct':'✗ Wrong'):'✓ Your vote'}</span>` : ''}
             </span>
             <span class="option-count">${count} vote${count!==1?'s':''}</span>
             <span class="option-pct">${pct}%</span>
