@@ -402,7 +402,7 @@
         if (!data || data.length === 0) throw new Error('Incorrect username or password.');
 
         // Store session (user id) in sessionStorage
-        sessionStorage.setItem('pw_user', JSON.stringify(data));
+        sessionStorage.setItem('pw_user', JSON.stringify(data[0]));
         window.location.href = 'dashboard.html';
       } catch (e) {
         showBanner(e.message);
