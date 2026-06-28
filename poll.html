@@ -46,7 +46,6 @@
     .option.selected { border-color:var(--accent);background:rgba(108,99,255,0.08); }
     .option.winner { border-color:rgba(255,169,77,0.5);background:rgba(255,169,77,0.04); }
     .option.final-answer { border-color:var(--gold);background:rgba(255,169,77,0.08); }
-    /* result colours when poll is closed with a final answer */
     .option.result-correct   { border-color:rgba(78,203,122,0.5) !important;background:rgba(78,203,122,0.08) !important; }
     .option.result-correct .option-bar   { background:rgba(78,203,122,0.12) !important; }
     .option.result-incorrect { border-color:rgba(255,107,107,0.4) !important;background:rgba(255,107,107,0.06) !important; }
@@ -65,7 +64,6 @@
     .results-mode .option-radio { display:none; }
     .results-mode .option { cursor:default; }
 
-    /* final answer crown badge */
     .crown { font-size:14px;margin-left:6px; }
     .final-answer-badge { display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--gold);background:rgba(255,169,77,0.12);border:1px solid rgba(255,169,77,0.25);border-radius:20px;padding:2px 8px;margin-left:8px;vertical-align:middle; }
 
@@ -79,6 +77,32 @@
     .btn-vote.loading .spinner { display:block; }
     .btn-vote.loading .lbl { display:none; }
     @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* ── Voted Players ── */
+    .voters-section { margin-top:16px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:20px 24px; }
+    .voters-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+    .voters-title { font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--muted); }
+    .voters-count { font-size:12px;color:var(--dim);background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:20px;padding:2px 9px; }
+    .voters-grid { display:flex;flex-direction:column;gap:8px; }
+    .voter-row { display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,0.02);transition:border-color 0.15s; }
+    .voter-row.is-me { border-color:rgba(108,99,255,0.3);background:rgba(108,99,255,0.05); }
+    .voter-row.voter-correct { border-color:rgba(78,203,122,0.25);background:rgba(78,203,122,0.04); }
+    .voter-row.voter-incorrect { border-color:rgba(255,107,107,0.2);background:rgba(255,107,107,0.03); }
+    .voter-avatar { width:28px;height:28px;border-radius:50%;background:rgba(108,99,255,0.18);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0; }
+    .voter-avatar.va-correct  { background:rgba(78,203,122,0.15);color:var(--success); }
+    .voter-avatar.va-incorrect{ background:rgba(255,107,107,0.12);color:var(--err); }
+    .voter-name { flex:1;font-size:14px;font-weight:500;color:var(--text); }
+    .voter-name.is-me { color:var(--accent); }
+    .voter-choice { font-size:12px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right; }
+    .voter-choice.choice-correct  { color:var(--success); }
+    .voter-choice.choice-incorrect{ color:var(--err); }
+    .voter-hidden { display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dim); }
+    .voter-tag { font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;letter-spacing:0.3px;margin-left:4px; }
+    .voter-tag.correct   { background:rgba(78,203,122,0.12);color:var(--success); }
+    .voter-tag.incorrect { background:rgba(255,107,107,0.10);color:var(--err); }
+    .voters-empty { font-size:13px;color:var(--dim);text-align:center;padding:12px 0; }
+    .voters-loading { display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);padding:4px 0; }
+    .mini-spinner { width:12px;height:12px;border:1.5px solid var(--border2);border-top-color:var(--muted);border-radius:50%;animation:spin 0.6s linear infinite; }
 
     /* Owner close poll section */
     .owner-section { margin-top:16px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:20px 24px; }
@@ -104,6 +128,7 @@
     .skel { background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;margin-bottom:16px; }
     .skel-box { background:var(--border);border-radius:8px;animation:pulse 1.4s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
     /* ── Results summary ── */
     .results-summary { margin-top:16px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:22px 24px; }
     .results-summary h3 { font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px; }
@@ -173,6 +198,17 @@
           You've already voted on this poll.
         </div>
         <div class="banner" id="err-banner"></div>
+      </div>
+
+      <!-- Voted Players -->
+      <div class="voters-section" id="voters-section" style="display:none">
+        <div class="voters-header">
+          <span class="voters-title" id="voters-title">Who voted</span>
+          <span class="voters-count" id="voters-count">0</span>
+        </div>
+        <div class="voters-grid" id="voters-grid">
+          <div class="voters-loading"><div class="mini-spinner"></div> Loading voters…</div>
+        </div>
       </div>
 
       <!-- Owner panel: pick final answer & close poll -->
@@ -281,6 +317,12 @@
 
       renderOptions(resultsMode);
 
+      // Show voters panel whenever there are votes (to anyone who can see results)
+      if (votes.length > 0 && (resultsMode || hasVoted)) {
+        document.getElementById('voters-section').style.display = 'block';
+        renderVoters();
+      }
+
       // Show owner panel only if poll is still open and user is owner
       if (isOwner && !isClosed) {
         document.getElementById('owner-section').style.display = 'block';
@@ -309,13 +351,12 @@
         const isMyVote = myVote?.option_id === opt.id;
         const isWinner = resultsMode && count===maxVotes && count>0 && !finalAnswerId;
 
-        // colour logic: only applies when poll is closed AND has a final answer
         let resultClass = '';
         if (isClosed && finalAnswerId) {
-          if (isFinal && isMyVote)       resultClass = 'result-correct';   // picked the right one
-          else if (!isFinal && isMyVote) resultClass = 'result-incorrect'; // picked wrong one
-          else if (isFinal)              resultClass = 'final-answer';     // the correct answer (not chosen by user)
-          else                           resultClass = 'result-unchosen';  // neither chosen nor correct
+          if (isFinal && isMyVote)       resultClass = 'result-correct';
+          else if (!isFinal && isMyVote) resultClass = 'result-incorrect';
+          else if (isFinal)              resultClass = 'final-answer';
+          else                           resultClass = 'result-unchosen';
         }
 
         const baseClass = `option${isMyVote&&!finalAnswerId?' selected':''}${!isClosed||!finalAnswerId?(isWinner?' winner':''):''}`;
@@ -344,6 +385,85 @@
         el.classList.toggle('selected', el.id==='opt-'+id)
       );
       document.getElementById('btn-vote').disabled = false;
+    }
+
+    // ── Voted Players ──────────────────────────────────────────
+    async function renderVoters() {
+      const grid = document.getElementById('voters-grid');
+      const countEl = document.getElementById('voters-count');
+      const titleEl = document.getElementById('voters-title');
+
+      countEl.textContent = votes.length;
+      titleEl.textContent = isClosed && finalAnswerId ? 'Player results' : 'Who voted';
+
+      try {
+        const voterIds = votes.map(v => v.user_id);
+        const { data: userData, error: uErr } = await sb
+          .from('users')
+          .select('id,username')
+          .in('id', voterIds);
+        if (uErr) throw uErr;
+
+        const userMap = {};
+        (userData || []).forEach(u => userMap[u.id] = u);
+
+        // Build option label map for revealing choices on closed polls
+        const optionMap = {};
+        options.forEach(o => optionMap[o.id] = o.label);
+
+        const rows = votes.map(v => {
+          const u = userMap[v.user_id] || { username: '?', id: v.user_id };
+          const isMe = v.user_id === user.id;
+          const isCorrect = finalAnswerId ? v.option_id === finalAnswerId : null;
+          return { username: u.username, userId: v.user_id, isMe, isCorrect, optionId: v.option_id };
+        });
+
+        // Sort: me first, then correct voters, then incorrect
+        rows.sort((a, b) => {
+          if (a.isMe && !b.isMe) return -1;
+          if (!a.isMe && b.isMe) return 1;
+          if (finalAnswerId) {
+            if (a.isCorrect && !b.isCorrect) return -1;
+            if (!a.isCorrect && b.isCorrect) return 1;
+          }
+          return a.username.localeCompare(b.username);
+        });
+
+        grid.innerHTML = rows.map(row => {
+          const rowClass = row.isMe
+            ? 'voter-row is-me'
+            : finalAnswerId
+              ? (row.isCorrect ? 'voter-row voter-correct' : 'voter-row voter-incorrect')
+              : 'voter-row';
+
+          const avatarClass = finalAnswerId
+            ? (row.isCorrect ? 'voter-avatar va-correct' : 'voter-avatar va-incorrect')
+            : 'voter-avatar';
+
+          // Choice display: hidden on open polls, revealed on closed
+          let choiceHtml = '';
+          if (isClosed && finalAnswerId) {
+            const label = escHtml(optionMap[row.optionId] || '?');
+            const cls   = row.isCorrect ? 'choice-correct' : 'choice-incorrect';
+            const icon  = row.isCorrect ? '✓' : '✗';
+            const tag   = row.isCorrect
+              ? `<span class="voter-tag correct">Correct</span>`
+              : `<span class="voter-tag incorrect">Wrong</span>`;
+            choiceHtml = `<span class="voter-choice ${cls}">${icon} ${label}</span>${tag}`;
+          } else {
+            choiceHtml = `<span class="voter-hidden"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Hidden</span>`;
+          }
+
+          return `<div class="${rowClass}">
+            <div class="${avatarClass}">${row.username[0].toUpperCase()}</div>
+            <span class="voter-name ${row.isMe ? 'is-me' : ''}">${escHtml(row.username)}${row.isMe ? ' <span style="font-size:11px;opacity:0.7">(you)</span>' : ''}</span>
+            ${choiceHtml}
+          </div>`;
+        }).join('');
+
+      } catch(e) {
+        grid.innerHTML = `<div class="voters-empty">Failed to load voters: ${e.message}</div>`;
+      }
     }
 
     // ── Owner: pick final answer ───────────────────────────────
@@ -375,7 +495,6 @@
       lbl.style.display     = 'none';
 
       try {
-        // Set ends_at to now and save final_answer_id
         const { error } = await sb
           .from('polls')
           .update({ ends_at: new Date().toISOString(), final_answer_id: ownerSelectedId })
@@ -383,7 +502,6 @@
           .eq('user_id', user.id);
         if (error) throw error;
 
-        // Award points: +5 per incorrect voter to creator, +5 to correct voters
         await sb.rpc('award_points_on_close', {
           p_poll_id:         pollId,
           p_final_answer_id: ownerSelectedId,
@@ -426,7 +544,6 @@
       list.innerHTML = '<div class="rs-empty">Loading…</div>';
 
       try {
-        // Fetch all voters with their usernames and chosen options
         const { data: voteData, error: vErr } = await sb
           .from('votes')
           .select('user_id,option_id')
@@ -448,17 +565,14 @@
         const userMap = {};
         (userData || []).forEach(u => userMap[u.id] = u);
 
-        // Build rows: voters first, then creator
         const rows = voteData.map(v => {
           const correct = v.option_id === finalAnswerId;
           const u = userMap[v.user_id] || { username: '?', points: 0 };
           return { type: correct ? 'correct' : 'incorrect', username: u.username, userId: v.user_id, pts: correct ? +5 : -5 };
         });
 
-        // Sort: correct first, then incorrect
         rows.sort((a, b) => b.pts - a.pts);
 
-        // Add creator row
         const correctCount   = rows.filter(r => r.type === 'correct').length;
         const incorrectCount = rows.filter(r => r.type === 'incorrect').length;
         const creatorNet     = (incorrectCount * 5) - (correctCount * 5);
