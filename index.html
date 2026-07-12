@@ -315,6 +315,10 @@
         </div>
         <p class="err-msg" id="s-pw-err"></p>
       </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-bottom:0">
+        <input type="checkbox" id="l-remember" style="width:16px;height:16px;accent-color:var(--accent)" checked />
+        <label for="l-remember" style="text-transform:none;font-size:13px;font-weight:400;color:var(--muted);margin:0">Remember me</label>
+      </div>
       <button class="btn" id="btn-signup" onclick="handleSignup()">
         <div class="spinner"></div><span class="lbl">Create account</span>
       </button>
@@ -388,21 +392,25 @@
       clearAll();
       const username = document.getElementById('l-user').value.trim();
       const pw       = document.getElementById('l-pw').value;
+      const remember = document.getElementById('l-remember').checked;
       let ok = true;
-
+    
       if (!username) { setErr('l-user-err', 'Username is required.'); document.getElementById('l-user').classList.add('err'); ok = false; }
       if (!pw)       { setErr('l-pw-err',   'Password is required.'); document.getElementById('l-pw').classList.add('err');   ok = false; }
       if (!ok) return;
-
+    
       setLoading('btn-login', true);
       try {
-        // Look up user by username, then verify password hash via RPC
         const { data, error } = await sb.rpc('login_user', { p_username: username, p_password: pw });
         if (error) throw new Error('Something went wrong. Please try again.');
         if (!data || data.length === 0) throw new Error('Incorrect username or password.');
-
-        // Store session (user id) in sessionStorage
-        sessionStorage.setItem('pw_user', JSON.stringify(data[0]));
+    
+        // Store in localStorage if "remember me" is checked, else sessionStorage (tab-only)
+        const store = remember ? localStorage : sessionStorage;
+        store.setItem('pw_user', JSON.stringify(data[0]));
+        // make sure there isn't a stale copy in the other storage
+        (remember ? sessionStorage : localStorage).removeItem('pw_user');
+    
         window.location.href = 'dashboard.html';
       } catch (e) {
         showBanner(e.message);
@@ -410,7 +418,6 @@
         setLoading('btn-login', false);
       }
     }
-
     // ── Register ───────────────────────────────────────────────
     async function handleSignup() {
       clearAll();
