@@ -54,6 +54,14 @@
     .lb-pts { font-size:13px;font-weight:700;flex-shrink:0; }
     .lb-empty { font-size:13px;color:var(--dim);text-align:center;padding:12px 0; }
 
+    /* Win percentage card */
+    .winrate-row { display:flex;align-items:center;justify-content:space-between;padding:6px 0; }
+    .winrate-label { font-size:13px;color:var(--muted);font-weight:500; }
+    .winrate-value { font-size:18px;font-weight:700;color:var(--muted); }
+    .winrate-sub { font-size:11px;color:var(--dim);margin-bottom:10px; }
+    .winrate-sub:last-child { margin-bottom:0; }
+    .winrate-divider { border-top:1px solid var(--border);margin:2px 0 8px; }
+
     .tabs { display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px; }
     .tab { padding:10px 16px;font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;transition:color 0.15s;white-space:nowrap; }
     .tab.active { color:var(--text);border-bottom-color:var(--accent); }
@@ -162,6 +170,24 @@
           <div class="leaderboard-title">🏆 Leaderboard</div>
           <div id="lb-list"><div class="lb-empty">Loading…</div></div>
         </div>
+
+        <div class="leaderboard" id="winrate-card">
+          <div class="leaderboard-title">🎯 Win percentage</div>
+
+          <div class="winrate-row">
+            <span class="winrate-label">As voter</span>
+            <span class="winrate-value" id="winrate-voter">—</span>
+          </div>
+          <div class="winrate-sub" id="winrate-voter-sub">Loading…</div>
+
+          <div class="winrate-divider"></div>
+
+          <div class="winrate-row">
+            <span class="winrate-label">As creator</span>
+            <span class="winrate-value" id="winrate-creator">—</span>
+          </div>
+          <div class="winrate-sub" id="winrate-creator-sub">Loading…</div>
+        </div>
       </div>
 
       <!-- RIGHT PANEL -->
@@ -228,7 +254,7 @@
     function ptsIcon(n)   { return n < 0 ? '📉' : '⭐'; }
 
     async function loadAll() {
-      await Promise.all([loadPolls(), loadLeaderboard()]);
+      await Promise.all([loadPolls(), loadLeaderboard(), loadWinRate()]);
     }
 
     async function loadLeaderboard() {
@@ -276,6 +302,108 @@
         }).join('');
       } catch(e) {
         document.getElementById('lb-list').innerHTML = '<div class="lb-empty">Failed to load leaderboard.</div>';
+      }
+    }
+
+    // ── Win percentage ──────────────────────────────────────────
+    // "As voter": of the polls you voted on that have since been resolved
+    // (closed with a final answer), what % did you get right?
+    // "As creator": of your own polls that have been resolved, what % ended
+    // in your favor — i.e. more voters guessed WRONG than right, since that's
+    // how creators earn points under the current scoring rules.
+    async function loadWinRate() {
+      const voterEl    = document.getElementById('winrate-voter');
+      const voterSubEl = document.getElementById('winrate-voter-sub');
+      const creatorEl    = document.getElementById('winrate-creator');
+      const creatorSubEl = document.getElementById('winrate-creator-sub');
+
+      try {
+        // ── As voter ──
+        const { data: myVotes, error: mvErr } = await sb
+          .from('votes')
+          .select('poll_id,option_id')
+          .eq('user_id', user.id);
+        if (mvErr) throw mvErr;
+
+        let voterCorrect = 0, voterTotal = 0;
+        if (myVotes && myVotes.length) {
+          const pollIds = [...new Set(myVotes.map(v => v.poll_id))];
+          const { data: resolvedPolls, error: rpErr } = await sb
+            .from('polls')
+            .select('id,final_answer_id')
+            .in('id', pollIds)
+            .not('final_answer_id', 'is', null);
+          if (rpErr) throw rpErr;
+
+          const finalMap = {};
+          (resolvedPolls || []).forEach(p => { finalMap[p.id] = p.final_answer_id; });
+
+          myVotes.forEach(v => {
+            if (finalMap[v.poll_id] !== undefined) {
+              voterTotal++;
+              if (v.option_id === finalMap[v.poll_id]) voterCorrect++;
+            }
+          });
+        }
+
+        if (voterTotal > 0) {
+          const pct = Math.round((voterCorrect / voterTotal) * 100);
+          voterEl.textContent = pct + '%';
+          voterEl.style.color = pct >= 50 ? 'var(--success)' : 'var(--err)';
+          voterSubEl.textContent = `${voterCorrect} of ${voterTotal} resolved votes`;
+        } else {
+          voterEl.textContent = '—';
+          voterEl.style.color = 'var(--muted)';
+          voterSubEl.textContent = 'No resolved votes yet';
+        }
+
+        // ── As creator ──
+        const { data: myPolls, error: mpErr } = await sb
+          .from('polls')
+          .select('id,final_answer_id')
+          .eq('user_id', user.id)
+          .not('final_answer_id', 'is', null);
+        if (mpErr) throw mpErr;
+
+        let creatorWins = 0, creatorTotal = 0;
+        if (myPolls && myPolls.length) {
+          const pollIds = myPolls.map(p => p.id);
+          const { data: allVotes, error: avErr } = await sb
+            .from('votes')
+            .select('poll_id,option_id')
+            .in('poll_id', pollIds);
+          if (avErr) throw avErr;
+
+          const votesByPoll = {};
+          (allVotes || []).forEach(v => {
+            (votesByPoll[v.poll_id] = votesByPoll[v.poll_id] || []).push(v);
+          });
+
+          myPolls.forEach(p => {
+            const pollVotes = votesByPoll[p.id] || [];
+            if (!pollVotes.length) return; // no votes cast — not counted either way
+            creatorTotal++;
+            const correctCount   = pollVotes.filter(v => v.option_id === p.final_answer_id).length;
+            const incorrectCount = pollVotes.length - correctCount;
+            if (incorrectCount > correctCount) creatorWins++;
+          });
+        }
+
+        if (creatorTotal > 0) {
+          const pct = Math.round((creatorWins / creatorTotal) * 100);
+          creatorEl.textContent = pct + '%';
+          creatorEl.style.color = pct >= 50 ? 'var(--success)' : 'var(--err)';
+          creatorSubEl.textContent = `${creatorWins} of ${creatorTotal} resolved polls`;
+        } else {
+          creatorEl.textContent = '—';
+          creatorEl.style.color = 'var(--muted)';
+          creatorSubEl.textContent = 'No resolved polls yet';
+        }
+      } catch(e) {
+        voterEl.textContent = '—'; voterEl.style.color = 'var(--muted)';
+        creatorEl.textContent = '—'; creatorEl.style.color = 'var(--muted)';
+        voterSubEl.textContent = 'Failed to load';
+        creatorSubEl.textContent = 'Failed to load';
       }
     }
 
