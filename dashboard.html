@@ -213,7 +213,10 @@
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtcHZvZ2Z2enV1dGZpenpzb2N4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI1MzEwMzcsImV4cCI6MjA5ODEwNzAzN30.BP3aWRPxURQqYYmvWrtzTNXElUvxkcPmG5BlMgmgAno';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    const session = sessionStorage.getItem('pw_user');
+    function getSession() {
+      return localStorage.getItem('pw_user') || sessionStorage.getItem('pw_user');
+    }
+    const session = getSession();
     if (!session) { window.location.href = 'index.html'; }
     const user = JSON.parse(session);
     document.getElementById('nav-username').textContent = user.username;
