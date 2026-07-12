@@ -204,6 +204,27 @@
     .banner.error   { display: block; background: rgba(255,107,107,0.10); border: 1px solid rgba(255,107,107,0.25); color: var(--err); }
     .banner.success { display: block; background: rgba(78,203,122,0.10);  border: 1px solid rgba(78,203,122,0.25);  color: var(--success); }
 
+    .remember-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .remember-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .remember-row label {
+      text-transform: none;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      margin: 0;
+      cursor: pointer;
+    }
+
     .btn {
       width: 100%;
       height: 46px;
@@ -291,6 +312,10 @@
         </div>
         <p class="err-msg" id="l-pw-err"></p>
       </div>
+      <div class="remember-row">
+        <input type="checkbox" id="l-remember" checked />
+        <label for="l-remember">Remember me</label>
+      </div>
       <button class="btn" id="btn-login" onclick="handleLogin()">
         <div class="spinner"></div><span class="lbl">Sign in</span>
       </button>
@@ -314,10 +339,6 @@
           </button>
         </div>
         <p class="err-msg" id="s-pw-err"></p>
-      </div>
-      <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-bottom:0">
-        <input type="checkbox" id="l-remember" style="width:16px;height:16px;accent-color:var(--accent)" checked />
-        <label for="l-remember" style="text-transform:none;font-size:13px;font-weight:400;color:var(--muted);margin:0">Remember me</label>
       </div>
       <button class="btn" id="btn-signup" onclick="handleSignup()">
         <div class="spinner"></div><span class="lbl">Create account</span>
@@ -394,23 +415,23 @@
       const pw       = document.getElementById('l-pw').value;
       const remember = document.getElementById('l-remember').checked;
       let ok = true;
-    
+
       if (!username) { setErr('l-user-err', 'Username is required.'); document.getElementById('l-user').classList.add('err'); ok = false; }
       if (!pw)       { setErr('l-pw-err',   'Password is required.'); document.getElementById('l-pw').classList.add('err');   ok = false; }
       if (!ok) return;
-    
+
       setLoading('btn-login', true);
       try {
         const { data, error } = await sb.rpc('login_user', { p_username: username, p_password: pw });
         if (error) throw new Error('Something went wrong. Please try again.');
         if (!data || data.length === 0) throw new Error('Incorrect username or password.');
-    
+
         // Store in localStorage if "remember me" is checked, else sessionStorage (tab-only)
         const store = remember ? localStorage : sessionStorage;
         store.setItem('pw_user', JSON.stringify(data[0]));
         // make sure there isn't a stale copy in the other storage
         (remember ? sessionStorage : localStorage).removeItem('pw_user');
-    
+
         window.location.href = 'dashboard.html';
       } catch (e) {
         showBanner(e.message);
@@ -418,6 +439,7 @@
         setLoading('btn-login', false);
       }
     }
+
     // ── Register ───────────────────────────────────────────────
     async function handleSignup() {
       clearAll();
