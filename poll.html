@@ -259,7 +259,7 @@
       try {
         const { data: p, error: pErr } = await sb
           .from('polls')
-          .select('id,question,description,is_public,created_at,ends_at,user_id,final_answer_id')
+          .select('id,question,description,is_public,created_at,ends_at,user_id,final_answer_id,points_per_vote')
           .eq('id', pollId)
           .single();
         if (pErr) throw pErr;
@@ -298,7 +298,8 @@
       document.getElementById('p-avatar').textContent   = poll.username[0].toUpperCase();
       document.getElementById('p-author').textContent   = poll.username;
       document.getElementById('p-question').textContent = poll.question;
-      document.getElementById('p-stats').textContent    = `${totalVotes} vote${totalVotes!==1?'s':''} · Created ${created}`;
+      const pointsPerVote = poll.points_per_vote ?? 5;
+      document.getElementById('p-stats').textContent    = `${totalVotes} vote${totalVotes!==1?'s':''} · ${pointsPerVote} pt${pointsPerVote!==1?'s':''}/vote · Created ${created}`;
       if (poll.description) document.getElementById('p-desc').textContent = poll.description;
 
       const badge = document.getElementById('p-badge');
@@ -509,6 +510,7 @@
           p_poll_id:         pollId,
           p_final_answer_id: ownerSelectedId,
           p_creator_id:      user.id,
+          p_points_per_vote: poll.points_per_vote ?? 5,
         });
 
         await loadPoll();
@@ -568,17 +570,19 @@
         const userMap = {};
         (userData || []).forEach(u => userMap[u.id] = u);
 
+        const pointsPerVote = poll.points_per_vote ?? 5;
+
         const rows = voteData.map(v => {
           const correct = v.option_id === finalAnswerId;
           const u = userMap[v.user_id] || { username: '?', points: 0 };
-          return { type: correct ? 'correct' : 'incorrect', username: u.username, userId: v.user_id, pts: correct ? +5 : -5 };
+          return { type: correct ? 'correct' : 'incorrect', username: u.username, userId: v.user_id, pts: correct ? +pointsPerVote : -pointsPerVote };
         });
 
         rows.sort((a, b) => b.pts - a.pts);
 
         const correctCount   = rows.filter(r => r.type === 'correct').length;
         const incorrectCount = rows.filter(r => r.type === 'incorrect').length;
-        const creatorNet     = (incorrectCount * 5) - (correctCount * 5);
+        const creatorNet     = (incorrectCount * pointsPerVote) - (correctCount * pointsPerVote);
         rows.push({ type: 'creator', username: poll.username, userId: poll.user_id, pts: creatorNet });
 
         const medals = ['🥇','🥈','🥉'];
