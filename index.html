@@ -432,7 +432,7 @@
         // make sure there isn't a stale copy in the other storage
         (remember ? sessionStorage : localStorage).removeItem('pw_user');
 
-        window.location.href = 'dashboard.html';
+        window.location.href = 'categories.html';
       } catch (e) {
         showBanner(e.message);
       } finally {
