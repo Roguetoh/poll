@@ -250,7 +250,7 @@
         const pts = pointsMap[c.id] ?? 0;
         const counts = countMap[c.id] || { total: 0, open: 0 };
         const isEnded = c.status === 'ended';
-        const isOwner = c.user_id === user.id;
+        const isSuperadmin = user.usr_role === 'superadmin';
 
         return `<div class="cat-card ${isEnded ? 'is-ended' : ''}" onclick="gotoCategory(${c.id})">
           <div class="cat-top-row">
@@ -264,7 +264,7 @@
             <span>${counts.total} poll${counts.total !== 1 ? 's' : ''}</span>
             <span>${counts.open} open</span>
           </div>
-          ${isOwner ? `<button class="cat-toggle" onclick="toggleCategoryStatus(event, ${c.id}, '${c.status}')">${isEnded ? 'Reopen as ongoing' : 'Mark as ended'}</button>` : ''}
+          ${isSuperadmin ? `<button class="cat-toggle" onclick="toggleCategoryStatus(event, ${c.id}, '${c.status}')">${isEnded ? 'Reopen as ongoing' : 'Mark as ended'}</button>` : ''}
         </div>`;
       }).join('')}</div>`;
     }
@@ -277,7 +277,7 @@
       const verb = newStatus === 'ended' ? 'mark this category as ended' : 'reopen this category as ongoing';
       if (!confirm(`Are you sure you want to ${verb}?`)) return;
 
-      const { error } = await sb.from('poll_category').update({ status: newStatus }).eq('id', id).eq('user_id', user.id);
+      const { error } = await sb.rpc('set_category_status', { p_category_id: id, p_user_id: user.id, p_status: newStatus });
       if (error) { showToast('Failed to update category.'); return; }
       showToast(newStatus === 'ended' ? 'Category marked as ended.' : 'Category reopened.');
       await loadCategories();
