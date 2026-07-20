@@ -31,6 +31,8 @@
     .btn-accent:hover { background:var(--accent-h);border-color:var(--accent-h); }
 
     main { position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:40px 48px 80px; }
+    .back-link { display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);text-decoration:none;margin-bottom:10px;transition:color 0.15s; }
+    .back-link:hover { color:var(--text); }
     .page-header { display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap; }
     .page-header h1 { font-size:24px;font-weight:700;letter-spacing:-0.4px; }
     .page-header p { font-size:14px;color:var(--muted);margin-top:3px; }
@@ -154,7 +156,7 @@
 </head>
 <body>
   <nav>
-    <a class="nav-logo" href="dashboard.html">
+    <a class="nav-logo" href="categories.html">
       <div class="nav-logo-icon"><svg viewBox="0 0 24 24"><path d="M3 17h4v-6H3v6zm0-8h4V7H3v2zm6 8h4v-4H9v4zm0-8h4V7H9v2zm6 8h4V9h-4v8zm0-10h4V7h-4v2z"/></svg></div>
       <span class="nav-logo-text">PTCGamble</span>
     </a>
@@ -167,7 +169,16 @@
   </nav>
 
   <main>
-    <div class="page-header"><div><h1>Dashboard</h1><p>Create polls, collect points, see results.</p></div></div>
+    <div class="page-header">
+      <div>
+        <a class="back-link" href="categories.html">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Categories
+        </a>
+        <h1 id="category-name">Loading…</h1>
+        <p>Create polls, collect points, see results.</p>
+      </div>
+    </div>
 
     <div class="dashboard-layout">
 
@@ -266,6 +277,9 @@
     const user = JSON.parse(session);
     document.getElementById('nav-username').textContent = user.username;
 
+    const categoryId = Number(new URLSearchParams(window.location.search).get('category'));
+    if (!categoryId || Number.isNaN(categoryId)) { window.location.href = 'categories.html'; }
+
     let currentTab = 'all';
     let allPolls   = [];
 
@@ -273,19 +287,27 @@
     function ptsIcon(n)   { return n < 0 ? '📉' : '⭐'; }
 
     async function loadAll() {
-      await Promise.all([loadPolls(), loadLeaderboard(), loadWinRate()]);
+      await Promise.all([loadCategoryInfo(), loadPolls(), loadLeaderboard(), loadWinRate()]);
+    }
+
+    async function loadCategoryInfo() {
+      try {
+        const { data, error } = await sb.from('poll_category').select('name').eq('id', categoryId).single();
+        if (error) throw error;
+        document.getElementById('category-name').textContent = data.name;
+        document.title = `PTCGamble — ${data.name}`;
+      } catch (e) {
+        document.getElementById('category-name').textContent = 'Unknown category';
+      }
     }
 
     async function loadLeaderboard() {
       try {
-        const { data, error } = await sb
-          .from('users')
-          .select('id,username,points')
-          .order('points', { ascending: false })
-          .limit(10);
+        const { data, error } = await sb.rpc('get_category_points', { p_category_id: categoryId });
         if (error) throw error;
 
-        const me    = (data || []).find(u => u.id === user.id);
+        const rows = (data || []).map(r => ({ ...r, points: Number(r.points) })).sort((a, b) => b.points - a.points);
+        const me    = rows.find(u => u.user_id === user.id);
         const myPts = me?.points ?? 0;
 
         const badge = document.getElementById('nav-points-badge');
@@ -302,14 +324,15 @@
         statCard.style.background  = myPts < 0 ? 'rgba(255,107,107,0.05)' : myPts > 0 ? 'rgba(255,169,77,0.05)' : 'var(--card)';
 
         const list = document.getElementById('lb-list');
-        if (!data || !data.length) {
+        const top = rows.slice(0, 10);
+        if (!top.length) {
           list.innerHTML = '<div class="lb-empty">No points yet — close a poll to start scoring!</div>';
           return;
         }
 
         const medals = ['🥇','🥈','🥉'];
-        list.innerHTML = data.map((u, i) => {
-          const isMe  = u.id === user.id;
+        list.innerHTML = top.map((u, i) => {
+          const isMe  = u.user_id === user.id;
           const color = ptsColor(u.points);
           const icon  = ptsIcon(u.points);
           return `<div class="lb-row">
@@ -324,12 +347,7 @@
       }
     }
 
-    // ── Win percentage ──────────────────────────────────────────
-    // "As voter": of the polls you voted on that have since been resolved
-    // (closed with a final answer), what % did you get right?
-    // "As creator": of your own polls that have been resolved, what % ended
-    // in your favor — i.e. more voters guessed WRONG than right, since that's
-    // how creators earn points under the current scoring rules.
+    // ── Win percentage (scoped to this category) ────────────────
     async function loadWinRate() {
       const voterEl    = document.getElementById('winrate-voter');
       const voterSubEl = document.getElementById('winrate-voter-sub');
@@ -337,32 +355,39 @@
       const creatorSubEl = document.getElementById('winrate-creator-sub');
 
       try {
+        const { data: catPolls, error: cpErr } = await sb.from('polls').select('id').eq('category_id', categoryId);
+        if (cpErr) throw cpErr;
+        const catPollIds = (catPolls || []).map(p => p.id);
+
         // ── As voter ──
-        const { data: myVotes, error: mvErr } = await sb
-          .from('votes')
-          .select('poll_id,option_id')
-          .eq('user_id', user.id);
-        if (mvErr) throw mvErr;
-
         let voterCorrect = 0, voterTotal = 0;
-        if (myVotes && myVotes.length) {
-          const pollIds = [...new Set(myVotes.map(v => v.poll_id))];
-          const { data: resolvedPolls, error: rpErr } = await sb
-            .from('polls')
-            .select('id,final_answer_id')
-            .in('id', pollIds)
-            .not('final_answer_id', 'is', null);
-          if (rpErr) throw rpErr;
+        if (catPollIds.length) {
+          const { data: myVotes, error: mvErr } = await sb
+            .from('votes')
+            .select('poll_id,option_id')
+            .eq('user_id', user.id)
+            .in('poll_id', catPollIds);
+          if (mvErr) throw mvErr;
 
-          const finalMap = {};
-          (resolvedPolls || []).forEach(p => { finalMap[p.id] = p.final_answer_id; });
+          if (myVotes && myVotes.length) {
+            const pollIds = [...new Set(myVotes.map(v => v.poll_id))];
+            const { data: resolvedPolls, error: rpErr } = await sb
+              .from('polls')
+              .select('id,final_answer_id')
+              .in('id', pollIds)
+              .not('final_answer_id', 'is', null);
+            if (rpErr) throw rpErr;
 
-          myVotes.forEach(v => {
-            if (finalMap[v.poll_id] !== undefined) {
-              voterTotal++;
-              if (v.option_id === finalMap[v.poll_id]) voterCorrect++;
-            }
-          });
+            const finalMap = {};
+            (resolvedPolls || []).forEach(p => { finalMap[p.id] = p.final_answer_id; });
+
+            myVotes.forEach(v => {
+              if (finalMap[v.poll_id] !== undefined) {
+                voterTotal++;
+                if (v.option_id === finalMap[v.poll_id]) voterCorrect++;
+              }
+            });
+          }
         }
 
         if (voterTotal > 0) {
@@ -381,6 +406,7 @@
           .from('polls')
           .select('id,final_answer_id')
           .eq('user_id', user.id)
+          .eq('category_id', categoryId)
           .not('final_answer_id', 'is', null);
         if (mpErr) throw mpErr;
 
@@ -400,7 +426,7 @@
 
           myPolls.forEach(p => {
             const pollVotes = votesByPoll[p.id] || [];
-            if (!pollVotes.length) return; // no votes cast — not counted either way
+            if (!pollVotes.length) return;
             creatorTotal++;
             const correctCount   = pollVotes.filter(v => v.option_id === p.final_answer_id).length;
             const incorrectCount = pollVotes.length - correctCount;
@@ -431,6 +457,7 @@
         const { data: polls, error: pollErr } = await sb
           .from('polls')
           .select('id,question,description,is_public,created_at,ends_at,user_id,final_answer_id,points_per_vote')
+          .eq('category_id', categoryId)
           .order('created_at', { ascending: false });
         if (pollErr) throw pollErr;
 
@@ -497,7 +524,7 @@
 
       if (!polls.length) {
         const msgs = {
-          all:     ['No polls found',  'Be the first to create a poll!'],
+          all:     ['No polls found',  'Be the first to create a poll in this category!'],
           mine:    ['No polls yet',    'Create your first poll using the button above.'],
           closed:  ['No closed polls', 'Polls that have been closed will appear here.'],
           unvoted: ['All caught up!',  'You have voted on all available polls.'],
@@ -612,7 +639,7 @@
       const btn = document.getElementById('btn-create');
       btn.disabled = true; btn.classList.add('loading');
       try {
-        const { error } = await sb.rpc('create_poll', { p_user_id:user.id, p_question:question, p_description:desc||null, p_options:options, p_is_public:true, p_points_per_vote:pointsPerVote });
+        const { error } = await sb.rpc('create_poll', { p_user_id:user.id, p_question:question, p_description:desc||null, p_options:options, p_is_public:true, p_points_per_vote:pointsPerVote, p_category_id:categoryId });
         if (error) throw error;
         closeModal(); showToast('Poll created!'); await loadAll();
       } catch(e) { showModalBanner(e.message || 'Failed to create poll.'); }
